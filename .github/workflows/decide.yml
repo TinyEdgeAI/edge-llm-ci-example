@@ -1,0 +1,56 @@
+name: decide
+
+# Runs on every change to the shipped model: sweep the quantization ladder on a
+# real edge device, pick the best variant for the deployment profile, and publish
+# a signed deployment manifest as a build artifact.
+
+on:
+  push:
+    branches: [main]
+    paths: ['model.yaml', '.github/workflows/decide.yml']
+  workflow_dispatch:
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    steps:
+      - id: decide
+        uses: TinyEdgeAI/tinyedge-agent/actions/decide@v1
+        with:
+          api-key: ${{ secrets.TINYEDGE_API_KEY }}
+          model: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF"   # mirrors model.yaml
+          device: jetson-orin-nano
+          profile: max_quality
+          quants: "q8_0,q4_k_m"      # small ladder = fast, low-cost demo
+          dataset: wikitext
+          manifest-path: tinyedge-manifest.json
+
+      - name: Summarize the decision
+        if: always()
+        run: |
+          {
+            echo "## TinyEdge deployment decision"
+            echo ""
+            echo "- **Verdict:** \`${{ steps.decide.outputs.verdict }}\`"
+            gid="${{ steps.decide.outputs.group-id }}"
+            echo "- **Sweep:** [\`$gid\`](https://tinyedge.ai/dashboard/benchmarks/sweep/$gid)"
+            if [ -f tinyedge-manifest.json ]; then
+              ship=$(jq -r '.selected | "\(.quant) on \(.device)"' tinyedge-manifest.json)
+              alg=$(jq -r '.signatureAlg // "ed25519"' tinyedge-manifest.json)
+              echo "- **Ship:** \`$ship\`  (signed, $alg)"
+              echo ""
+              echo '<details><summary>signed manifest</summary>'
+              echo ""
+              echo '```json'
+              jq '{status, selected: {quant: .selected.quant, device: .selected.device, model: .selected.model}, objective, signatureAlg}' tinyedge-manifest.json
+              echo '```'
+              echo '</details>'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload signed manifest
+        if: steps.decide.outputs.verdict == 'ok'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinyedge-manifest
+          path: tinyedge-manifest.json

@@ -1,0 +1,12 @@
+# What this project ships to the edge — and the budget it must meet.
+# TinyEdge CI reads these values (mirrored in .github/workflows/) to benchmark the
+# model on a REAL device on every change: `decide` picks the best quant on push,
+# `validate` gates pull requests against the baseline + budget.
+
+model: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF"
+device: jetson-orin-nano
+profile: max_quality          # objective the `decide` engine optimizes for
+
+budgets:
+  max_latency_ms: 220         # hard p50 budget enforced by the `validate` gate
+  tolerance_pct: 10           # allowed perf drift vs the baseline

@@ -1,0 +1,24 @@
+name: validate
+
+# Gates pull requests: benchmark the candidate model on a real edge device and
+# FAIL the check if it regresses past the budget vs the known-good baseline.
+# Set a `TINYEDGE_BASELINE` repo variable (a baseline id) to enable it — see README.
+
+on:
+  pull_request:
+    paths: ['model.yaml']
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TinyEdgeAI/tinyedge-agent/actions/validate@v1
+        with:
+          api-key: ${{ secrets.TINYEDGE_API_KEY }}
+          model: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+          baseline: ${{ vars.TINYEDGE_BASELINE }}
+          device: jetson-orin-nano
+          max-latency: 220     # from model.yaml budgets — tighten on a branch to see it go red
+          tolerance: 10
+          # exit 0 = within budget (PR check GREEN), 1 = regression (RED, blocks merge)

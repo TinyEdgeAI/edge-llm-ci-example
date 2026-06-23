@@ -1,0 +1,5 @@
+tinyedge-manifest.json
+*.gguf
+__pycache__/
+*.pyc
+.venv/
