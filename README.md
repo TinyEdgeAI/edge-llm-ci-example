@@ -5,7 +5,7 @@
 
 An example project that ships an on-device LLM (`Llama-3.2-1B`) to a **Jetson Orin Nano** — with [TinyEdge](https://tinyedge.ai) wired into CI so **every change is benchmarked on the real device before it ships.**
 
-This isn't a mock. The badges above are live: each run sweeps the model's quantization ladder on actual hardware.
+The badges above show the status of the two workflows; results for each run are in the [Actions tab](../../actions).
 
 ## What the CI does
 
