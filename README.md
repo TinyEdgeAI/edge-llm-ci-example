@@ -1,4 +1,4 @@
-# Edge LLM, deployed with confidence
+# Edge LLM deployment, gated by CI
 
 [![decide](https://github.com/TinyEdgeAI/edge-llm-ci-example/actions/workflows/decide.yml/badge.svg)](../../actions/workflows/decide.yml)
 [![validate](https://github.com/TinyEdgeAI/edge-llm-ci-example/actions/workflows/validate.yml/badge.svg)](../../actions/workflows/validate.yml)
@@ -21,7 +21,7 @@ The model and its budget are declared in [`model.yaml`](model.yaml). On top of t
 1. Open the **[Actions tab](../../actions)** → click the latest **decide** run → the summary shows the verdict, the variant chosen, and the measured perplexity/latency, with the **signed manifest** attached as an artifact.
 2. The **validate** check is what runs on PRs — open one that tightens the budget and watch it go **red ✗** (a regression that would never reach a device).
 
-That's the whole pitch: you change a model, and CI tells you — on real hardware — *which quantized build to ship*, with cryptographic proof, and blocks anything that regresses.
+On each change, CI reports — measured on the device — which quantized build to ship, attaches a signed manifest, and blocks anything that regresses past the budget.
 
 ## How it works under the hood
 
