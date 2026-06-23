@@ -13,7 +13,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: TinyEdgeAI/tinyedge-agent/actions/validate@v1
+      - uses: TinyEdgeAI/tinyedge-actions/validate@v1
         with:
           api-key: ${{ secrets.TINYEDGE_API_KEY }}
           model: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF/Llama-3.2-1B-Instruct-Q4_K_M.gguf"

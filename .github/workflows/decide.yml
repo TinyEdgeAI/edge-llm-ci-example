@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: decide
-        uses: TinyEdgeAI/tinyedge-agent/actions/decide@v1
+        uses: TinyEdgeAI/tinyedge-actions/decide@v1
         with:
           api-key: ${{ secrets.TINYEDGE_API_KEY }}
           model: "hf:bartowski/Llama-3.2-1B-Instruct-GGUF"   # mirrors model.yaml

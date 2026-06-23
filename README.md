@@ -25,7 +25,7 @@ On each change, CI reports — measured on the device — which quantized build 
 
 ## How it works under the hood
 
-Both workflows are thin wrappers around the published [`TinyEdgeAI/tinyedge-agent`](https://github.com/TinyEdgeAI/tinyedge-agent) actions (`@v1`), which run two SDK commands you can also run locally (`pip install tinyedge`):
+Both workflows are thin wrappers around the published [`TinyEdgeAI/tinyedge-actions`](https://github.com/TinyEdgeAI/tinyedge-actions) (`@v1`), which run two SDK commands you can also run locally (`pip install tinyedge`):
 
 ```
 tinyedge optimize <model> --device jetson-orin-nano   # sweep the ladder on the device
