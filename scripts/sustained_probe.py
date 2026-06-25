@@ -36,9 +36,14 @@ env = os.environ.copy()
 env["LD_LIBRARY_PATH"] = f"/usr/local/cuda/lib64:{Path(CLI).parent}:" + env.get("LD_LIBRARY_PATH", "")
 env["LC_ALL"] = "C"  # keep llama.cpp's perf numbers dot-decimal for the parser
 
-CMD = [CLI, "-m", MODEL, "-p", PROMPT, "-n", "128", "-c", "1024",
+# Tunable via env for heat-hunting: TINYEDGE_N (tokens/generation — larger = more
+# continuous GPU load between reloads), TINYEDGE_CTX, TINYEDGE_NGL (GPU layers).
+N = os.environ.get("TINYEDGE_N", "128")
+CTX = os.environ.get("TINYEDGE_CTX", "1024")
+NGL = os.environ.get("TINYEDGE_NGL", "99")
+CMD = [CLI, "-m", MODEL, "-p", PROMPT, "-n", N, "-c", CTX,
        "-t", str(os.cpu_count() or 4), "--temp", "0", "--seed", "42",
-       "-st", "--simple-io", "--ignore-eos", "-ngl", "99"]
+       "-st", "--simple-io", "--ignore-eos", "-ngl", NGL]
 
 
 def temp_c():
