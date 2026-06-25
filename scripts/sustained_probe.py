@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -71,19 +72,55 @@ def decode_tps(stderr):
 samples = []
 t0 = time.time()
 deadline = t0 + MINUTES * 60
-print(f"sustained probe · {Path(MODEL).name} · {MINUTES} min  (Ctrl-C to stop early)", flush=True)
+CONTINUOUS = os.environ.get("TINYEDGE_CONTINUOUS") == "1"
+mode = "continuous (model stays loaded — max GPU load)" if CONTINUOUS else "reload-per-generation (accurate tok/s)"
+print(f"sustained probe · {Path(MODEL).name} · {MINUTES} min · {mode}  (Ctrl-C to stop)", flush=True)
+
+
+def record(tps):
+    t = round(time.time() - t0, 1)
+    tc = temp_c()
+    samples.append({"t": t, "tokensPerSec": tps, "deviceTempC": tc})
+    print(f"  t={t:>6.0f}s   {tps:>6.1f} tok/s   {tc}°C", flush=True)
+
+
 try:
-    while time.time() < deadline:
-        r = subprocess.run(CMD, cwd=str(Path(MODEL).parent), env=env,
-                           capture_output=True, text=True, timeout=600)
-        tps = decode_tps(r.stderr)
-        if tps is None:
-            tail = "\n".join(r.stderr.splitlines()[-5:])
-            sys.exit(f"could not parse tok/s (model path / binary OK?):\n{tail}")
-        t = round(time.time() - t0, 1)
-        tc = temp_c()
-        samples.append({"t": t, "tokensPerSec": tps, "deviceTempC": tc})
-        print(f"  t={t:>6.0f}s   {tps:>6.1f} tok/s   {tc}°C", flush=True)
+    if CONTINUOUS:
+        # One never-ending streamed generation: the model loads ONCE and the GPU is
+        # hammered continuously (no reload gaps). Throughput is approximated from the
+        # output byte-rate (~3.7 chars/token) — the curve SHAPE is what reveals throttling.
+        cmd = [CLI, "-m", MODEL, "-p", PROMPT, "-n", "100000000", "-c", CTX,
+               "-t", str(os.cpu_count() or 4), "--temp", "0", "--seed", "42",
+               "-st", "--simple-io", "--ignore-eos", "-ngl", NGL]
+        proc = subprocess.Popen(cmd, cwd=str(Path(MODEL).parent), env=env,
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+        total = [0]
+
+        def reader():
+            while True:
+                b = proc.stdout.read(256)
+                if not b:
+                    break
+                total[0] += len(b)
+
+        threading.Thread(target=reader, daemon=True).start()
+        last_t, last_c = time.time(), 0
+        while time.time() < deadline and proc.poll() is None:
+            time.sleep(8)
+            now, c = time.time(), total[0]
+            tps = round((c - last_c) / (now - last_t) / 3.7, 2)
+            last_t, last_c = now, c
+            record(tps)  # first samples read ~0 while the model loads, then ramp up
+        proc.kill()
+    else:
+        while time.time() < deadline:
+            r = subprocess.run(CMD, cwd=str(Path(MODEL).parent), env=env,
+                               capture_output=True, text=True, timeout=900)
+            tps = decode_tps(r.stderr)
+            if tps is None:
+                tail = "\n".join(r.stderr.splitlines()[-5:])
+                sys.exit(f"could not parse tok/s (model path / binary OK?):\n{tail}")
+            record(tps)
 except KeyboardInterrupt:
     print("\nstopped early", flush=True)
 
